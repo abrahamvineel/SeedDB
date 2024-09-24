@@ -8,6 +8,40 @@ package main
 
 import "fmt"
 
+type KeyValueStore struct {
+	kvstore map[string]string
+}
+
+func NewKeyValueStore() *KeyValueStore {
+	return &KeyValueStore{kvstore: make(map[string]string)}
+}
+
+func (kvstore *KeyValueStore) Put(key string, value string) {
+	kvstore.kvstore[key] = value
+}
+
+func (keyvaluestore *KeyValueStore) Get(key string) (string, bool) {
+	value, ok := keyvaluestore.kvstore[key]
+	return value, ok
+}
+
+func (keyvaluestore *KeyValueStore) Delete(key string) {
+	delete(keyvaluestore.kvstore, key)
+}
+
 func main() {
-	fmt.Println("Hello")
+	kvstore := NewKeyValueStore()
+
+	kvstore.Put("name1", "hello1")
+	kvstore.Put("name2", "hello2")
+	kvstore.Put("name3", "hello3")
+
+	fmt.Println(kvstore.kvstore)
+
+	fmt.Println(kvstore.Get("name3"))
+
+	kvstore.Delete("name2")
+	fmt.Println(kvstore.kvstore)
+
+	fmt.Println(kvstore.Get("name4"))
 }

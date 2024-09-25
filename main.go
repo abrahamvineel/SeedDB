@@ -6,7 +6,12 @@ Stage 5: Scale out by implementing sharding or replication across nodes. */
 
 package main
 
-import "fmt"
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+)
 
 type KeyValueStore struct {
 	kvstore map[string]string
@@ -29,6 +34,46 @@ func (keyvaluestore *KeyValueStore) Delete(key string) {
 	delete(keyvaluestore.kvstore, key)
 }
 
+func (kvstore *KeyValueStore) Save(filename string) error {
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	for key, value := range kvstore.kvstore {
+		_, err := file.WriteString(fmt.Sprintf("%s:%s\n", key, value))
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (kvstore *KeyValueStore) Read(filename string) error {
+	file, err := os.Open(filename)
+
+	if err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		words := strings.Split(line, ":")
+
+		if len(words) == 2 {
+			fmt.Println(words)
+			kvstore.Put(words[0], words[1])
+		}
+	}
+	return scanner.Err()
+}
+
 func main() {
 	kvstore := NewKeyValueStore()
 
@@ -36,12 +81,13 @@ func main() {
 	kvstore.Put("name2", "hello2")
 	kvstore.Put("name3", "hello3")
 
-	fmt.Println(kvstore.kvstore)
+	// fmt.Println(kvstore.kvstore)
 
-	fmt.Println(kvstore.Get("name3"))
+	// fmt.Println(kvstore.Get("name3"))
 
-	kvstore.Delete("name2")
-	fmt.Println(kvstore.kvstore)
+	// fmt.Println(kvstore.Save("test.txt"))
 
-	fmt.Println(kvstore.Get("name4"))
+	kvstore.Read("test.txt")
+
+	// fmt.Println(kvstore.kvstore)
 }

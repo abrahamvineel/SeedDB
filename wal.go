@@ -12,7 +12,10 @@
 // Optional (Advanced) Features: 9. Log Compaction 10. Fault Tolerance 11. Batching Writes 12. Versioning or Log Metadata 13. Support for Distributed Systems
 package main
 
-import "os"
+import (
+	"io"
+	"os"
+)
 
 type LogRecord struct {
 	LogSequenceNumber uint64
@@ -25,8 +28,22 @@ type WAL struct {
 	LastLogSequenceNumber uint64
 }
 
-func createWAL(filePath string) (*WAL, error) {
+func (wal *WAL) createWAL(filePath string) (*WAL, error) {
 
+	//gen lsn
+
+	currOffset, err := wal.file.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return 0, err
+	}
+
+	//serialize the record
+
+	//write to file
+}
+
+func (wal *WAL) generateLSN() uint64 {
+	return wal.LastLogSequenceNumber
 }
 
 func createLogEntry() {}

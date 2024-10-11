@@ -15,6 +15,8 @@ package main
 import (
 	"io"
 	"os"
+
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type LogRecord struct {
@@ -34,10 +36,18 @@ func (wal *WAL) createWAL(filePath string) (*WAL, error) {
 
 	currOffset, err := wal.file.Seek(0, io.SeekCurrent)
 	if err != nil {
-		return 0, err
+		return nil, err
+	}
+
+	// need to implement crc
+	record := &LogRecord{
+		LogSequenceNumber: uint64(currOffset),
+		Data:              nil,
+		CRC:               1,
 	}
 
 	//serialize the record
+	data, err := msgpack.Marshal(record)
 
 	//write to file
 }

@@ -13,6 +13,7 @@
 package main
 
 import (
+	"hash/crc32"
 	"io"
 	"os"
 
@@ -39,11 +40,17 @@ func (wal *WAL) createWAL(filePath string) (*WAL, error) {
 		return nil, err
 	}
 
-	// need to implement crc
+	crc32Hash := crc32.NewIEEE()
+
+	//need to find way to get data
+	crc32Hash.Write(data)
+
+	checksum := crc32Hash.Sum32()
+
 	record := &LogRecord{
 		LogSequenceNumber: uint64(currOffset),
 		Data:              nil,
-		CRC:               1,
+		CRC:               checksum,
 	}
 
 	//serialize the record

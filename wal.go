@@ -57,6 +57,9 @@ func (wal *WAL) createWAL(filePath string) (*WAL, error) {
 	data, err := msgpack.Marshal(record)
 
 	//write to file
+
+	wal.file.WriteString(string(data))
+	return wal, err
 }
 
 func (wal *WAL) generateLSN() uint64 {

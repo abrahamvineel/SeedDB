@@ -13,6 +13,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"hash/crc32"
 	"io"
 	"os"
@@ -31,7 +33,13 @@ type WAL struct {
 	LastLogSequenceNumber uint64
 }
 
-func (wal *WAL) createWAL(filePath string) (*WAL, error) {
+const (
+	insert byte = 1
+	update byte = 2
+	delete byte = 3
+)
+
+func (wal *WAL) createWAL(filePath string, operation byte, key string, value string) (*WAL, error) {
 
 	//gen lsn
 
@@ -40,25 +48,36 @@ func (wal *WAL) createWAL(filePath string) (*WAL, error) {
 		return nil, err
 	}
 
+	var buffer bytes.Buffer
+
+	buffer.WriteByte(operation)
+
+	keyLen := uint32(len(key))
+	binary.Write(&buffer, binary.LittleEndian, keyLen)
+	buffer.Write([]byte(key))
+
+	valueLen := uint32(len(value))
+	binary.Write(&buffer, binary.LittleEndian, valueLen)
+	buffer.Write([]byte(value))
+
+	data := buffer.Bytes()
+
+	//calculate checksum
 	crc32Hash := crc32.NewIEEE()
-
-	//need to find way to get data
 	crc32Hash.Write(data)
-
 	checksum := crc32Hash.Sum32()
 
 	record := &LogRecord{
 		LogSequenceNumber: uint64(currOffset),
-		Data:              nil,
+		Data:              data,
 		CRC:               checksum,
 	}
 
 	//serialize the record
-	data, err := msgpack.Marshal(record)
+	serializeRec, err := msgpack.Marshal(record)
 
 	//write to file
-
-	wal.file.WriteString(string(data))
+	wal.file.WriteString(string(serializeRec))
 	return wal, err
 }
 

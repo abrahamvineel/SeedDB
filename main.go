@@ -74,20 +74,20 @@ func (kvstore *KeyValueStore) Read(filename string) error {
 	return scanner.Err()
 }
 
-func main() {
-	kvstore := NewKeyValueStore()
+// func main() {
+// 	kvstore := NewKeyValueStore()
 
-	kvstore.Put("name1", "hello1")
-	kvstore.Put("name2", "hello2")
-	kvstore.Put("name3", "hello3")
+// 	kvstore.Put("name1", "hello1")
+// 	kvstore.Put("name2", "hello2")
+// 	kvstore.Put("name3", "hello3")
 
-	fmt.Println(kvstore.kvstore)
+// 	fmt.Println(kvstore.kvstore)
 
-	// fmt.Println(kvstore.Get("name3"))
+// 	// fmt.Println(kvstore.Get("name3"))
 
-	fmt.Println(kvstore.Save("test.txt"))
+// 	fmt.Println(kvstore.Save("test.txt"))
 
-	kvstore.Read("test.txt")
+// 	kvstore.Read("test.txt")
 
-	fmt.Println(kvstore.kvstore)
-}
+// 	fmt.Println(kvstore.kvstore)
+// }

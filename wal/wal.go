@@ -40,7 +40,7 @@ const (
 	delete byte = 3
 )
 
-func (wal *WAL) createWAL(filePath string, operation byte, key string, value string) (*WAL, error) {
+func (wal *WAL) createWAL(filePath string, operation byte, value string) (*WAL, error) {
 
 	//generate lsn
 	currOffset, err := wal.file.Seek(0, io.SeekCurrent)
@@ -51,10 +51,6 @@ func (wal *WAL) createWAL(filePath string, operation byte, key string, value str
 	var buffer bytes.Buffer
 
 	buffer.WriteByte(operation)
-
-	keyLen := uint32(len(key))
-	binary.Write(&buffer, binary.LittleEndian, keyLen)
-	buffer.Write([]byte(key))
 
 	valueLen := uint32(len(value))
 	binary.Write(&buffer, binary.LittleEndian, valueLen)

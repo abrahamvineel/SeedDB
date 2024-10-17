@@ -77,7 +77,13 @@ func (wal *WAL) createWAL(filePath string, operation byte, value string) (*WAL, 
 	return wal, err
 }
 
-func createLogEntry() {}
+func ReadLogRecord() {
+	//deserialize
+
+	//break the record based on record length
+
+	//check crc?
+}
 
 func NewWAL(filePath string) (*WAL, error) {
 

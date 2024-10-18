@@ -83,6 +83,7 @@ func ReadLogRecord() {
 	//break the record based on record length
 
 	//check crc?
+
 }
 
 func NewWAL(filePath string) (*WAL, error) {

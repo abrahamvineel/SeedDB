@@ -9,11 +9,11 @@
 // Efficient Log Truncation
 // Log Synchronization
 // Concurrency and Thread Safety
-// Optional (Advanced) Features: 
-// 9. Log Compaction 
-// 10. Fault Tolerance 
-// 11. Batching Writes 
-// 12. Versioning or Log Metadata 
+// Optional (Advanced) Features:
+// 9. Log Compaction
+// 10. Fault Tolerance
+// 11. Batching Writes
+// 12. Versioning or Log Metadata
 // 13. Support for Distributed Systems
 package main
 
@@ -78,6 +78,8 @@ func (wal *WAL) createWAL(filePath string, operation byte, value string) (*WAL, 
 	serializeRec, err := msgpack.Marshal(record)
 
 	//write to file
+	//need to write using file sync
+
 	wal.file.WriteString(string(serializeRec))
 	return wal, err
 }

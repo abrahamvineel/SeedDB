@@ -45,7 +45,7 @@ const (
 	delete byte = 3
 )
 
-func (wal *WAL) createWAL(filePath string, operation byte, value string) (*WAL, error) {
+func (wal *WAL) createWAL(operation byte, value string) (*WAL, error) {
 
 	//generate lsn
 	currOffset, err := wal.file.Seek(0, io.SeekCurrent)
@@ -81,6 +81,11 @@ func (wal *WAL) createWAL(filePath string, operation byte, value string) (*WAL, 
 	//need to write using file sync
 
 	wal.file.WriteString(string(serializeRec))
+
+	if err := wal.file.Sync(); err != nil {
+		return nil, err
+	}
+
 	return wal, err
 }
 
@@ -116,7 +121,7 @@ func main() {
 		return
 	}
 
-	wal.createWAL("test.txt", 1, "hello", "world")
+	wal.createWAL(1, "hello:world")
 
 	defer wal.file.Close()
 }

@@ -125,3 +125,5 @@ func main() {
 
 	defer wal.file.Close()
 }
+
+//checkpointing needs to be implemented separately

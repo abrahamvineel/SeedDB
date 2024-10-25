@@ -39,6 +39,12 @@ type WAL struct {
 	LastLogSequenceNumber uint64
 }
 
+type CheckPointLogRecord struct {
+	LogSequenceNumber uint64
+	CheckpointLSN     uint64
+	CRC               uint32
+}
+
 const (
 	insert byte = 1
 	update byte = 2

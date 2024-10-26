@@ -104,6 +104,10 @@ func ReadLogRecord() {
 
 }
 
+func (wal *WAL) createCheckpoint() {
+
+}
+
 func NewWAL(filePath string) (*WAL, error) {
 
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
@@ -131,5 +135,3 @@ func main() {
 
 	defer wal.file.Close()
 }
-
-//checkpointing needs to be implemented separately

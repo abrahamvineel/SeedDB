@@ -51,8 +51,7 @@ const (
 	delete byte = 3
 )
 
-func (wal *WAL) createWAL(operation byte, value string) (*WAL, error) {
-
+func (wal *WAL) createLogRecord(operation byte, value string) (*LogRecord, error) {
 	//generate lsn
 	currOffset, err := wal.file.Seek(0, io.SeekCurrent)
 	if err != nil {
@@ -80,28 +79,42 @@ func (wal *WAL) createWAL(operation byte, value string) (*WAL, error) {
 		CRC:               checksum,
 	}
 
+	return record, nil
+}
+
+func (wal *WAL) sequentialWrite(record *LogRecord) (*WAL, error) {
+
 	//serialize the record
 	serializeRec, err := msgpack.Marshal(record)
-
-	//write to file
-	//need to write using file sync
+	if err != nil {
+		return nil, err
+	}
 
 	wal.file.WriteString(string(serializeRec))
-
 	if err := wal.file.Sync(); err != nil {
 		return nil, err
 	}
 
-	return wal, err
+	return wal, nil
 }
 
-func ReadLogRecord() {
-	//deserialize
+func (wal *WAL) batchWrite(logRecords []LogRecord) error {
+	for _, record := range logRecords {
 
-	//break the record based on record length
+		serializeRecord, err := msgpack.Marshal(record)
+		if err != nil {
+			return err
+		}
 
-	//check crc?
+		if _, err := wal.file.Write(serializeRecord); err != nil {
+			return err
+		}
+	}
 
+	if err := wal.file.Sync(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (wal *WAL) createCheckpoint() {

@@ -117,8 +117,41 @@ func (wal *WAL) batchWrite(logRecords []LogRecord) error {
 	return nil
 }
 
-func (wal *WAL) createCheckpoint() {
+func (wal *WAL) createCheckpoint(logRecord *LogRecord, filePath string) error {
 
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	checkpointLSN := wal.LastLogSequenceNumber
+
+	crc32Hash := crc32.NewIEEE()
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, checkpointLSN)
+	crc32Hash.Write(buf)
+	checksum := crc32Hash.Sum32()
+
+	checkpointRecord := CheckPointLogRecord{
+		LogSequenceNumber: checkpointLSN,
+		CheckpointLSN:     checkpointLSN,
+		CRC:               checksum,
+	}
+
+	serializedData, err := msgpack.Marshal(checkpointRecord)
+	if err != nil {
+		return err
+	}
+
+	if _, err := file.Write(serializedData); err != nil {
+		return err
+	}
+
+	if err := file.Sync(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewWAL(filePath string) (*WAL, error) {
@@ -144,7 +177,8 @@ func main() {
 		return
 	}
 
-	wal.createWAL(1, "hello:world")
+	logRecord, _ := wal.createLogRecord(1, "hello:world")
+	wal.sequentialWrite(logRecord)
 
 	defer wal.file.Close()
 }

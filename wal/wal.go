@@ -99,6 +99,7 @@ func (wal *WAL) sequentialWrite(record *LogRecord) (*WAL, error) {
 }
 
 func (wal *WAL) batchWrite(logRecords []LogRecord) error {
+
 	for _, record := range logRecords {
 
 		serializeRecord, err := msgpack.Marshal(record)
@@ -182,3 +183,5 @@ func main() {
 
 	defer wal.file.Close()
 }
+
+//crash recover to be implemented

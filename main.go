@@ -84,7 +84,7 @@ func main() {
 
 	fmt.Println(kvstore.kvstore)
 
-	// fmt.Println(kvstore.Get("name3"))
+	fmt.Println(kvstore.Get("name3"))
 
 	fmt.Println(kvstore.Save("test.txt"))
 

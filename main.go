@@ -76,6 +76,7 @@ func (kvstore *KeyValueStore) Read(filename string) error {
 }
 
 func main() {
+
 	kvstore := NewKeyValueStore()
 
 	kvstore.Put("name1", "hello1")

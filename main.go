@@ -6,6 +6,7 @@ Stage 5: Scale out by implementing sharding or replication across nodes. */
 
 package main
 
+
 import (
 	"bufio"
 	"fmt"

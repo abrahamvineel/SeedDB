@@ -4,6 +4,7 @@ Stage 3: Add concurrency using goroutines, locks, and channels.
 Stage 4: Implement an LSM Tree-based or B-Tree-based on-disk storage model.
 Stage 5: Scale out by implementing sharding or replication across nodes. */
 
+
 package main
 
 import (
@@ -46,6 +47,7 @@ func (kvstore *KeyValueStore) Save(filename string) error {
 	for key, value := range kvstore.kvstore {
 		_, err := file.WriteString(fmt.Sprintf("%s:%s\n", key, value))
 
+
 		if err != nil {
 			return err
 		}
@@ -75,6 +77,7 @@ func (kvstore *KeyValueStore) Read(filename string) error {
 }
 
 func main() {
+
 	kvstore := NewKeyValueStore()
 
 	kvstore.Put("name1", "hello1")
@@ -83,7 +86,7 @@ func main() {
 
 	fmt.Println(kvstore.kvstore)
 
-	// fmt.Println(kvstore.Get("name3"))
+	fmt.Println(kvstore.Get("name3"))
 
 	fmt.Println(kvstore.Save("test.txt"))
 

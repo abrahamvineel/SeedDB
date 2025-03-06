@@ -156,6 +156,8 @@ func (wal *WAL) createCheckpoint(logRecord *LogRecord, filePath string) error {
 	return nil
 }
 
+//crash recover to be implemented
+
 func NewWAL(filePath string) (*WAL, error) {
 
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
@@ -184,5 +186,3 @@ func main() {
 
 	defer wal.file.Close()
 }
-
-//crash recover to be implemented

@@ -2,8 +2,9 @@
 Stage 2: Add persistence to disk (e.g., using a write-ahead log or appending to a file).
 Stage 3: Add concurrency using goroutines, locks, and channels.
 Stage 4: Implement an LSM Tree-based or B-Tree-based on-disk storage model.
-Stage 5: Scale out by implementing sharding or replication across nodes. */
+Stage 5: Scale out by implementing sharding or replication across nodes.
 
+wal, memtable, sstable, lsm trees*/
 
 package main
 
@@ -46,7 +47,6 @@ func (kvstore *KeyValueStore) Save(filename string) error {
 
 	for key, value := range kvstore.kvstore {
 		_, err := file.WriteString(fmt.Sprintf("%s:%s\n", key, value))
-
 
 		if err != nil {
 			return err

@@ -11,88 +11,86 @@ need to implement inserting values to dat file format for sstables*/
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"strings"
+	"kv_store/db/belldb"
 )
 
-type KeyValueStore struct {
-	kvstore map[string]string
-}
+// type BellDB struct {
+// 	bellDB map[string]string
+// }
 
-func NewKeyValueStore() *KeyValueStore {
-	return &KeyValueStore{kvstore: make(map[string]string)}
-}
+// func getInstance() *BellDB {
+// 	return &BellDB{bellDB: make(map[string]string)}
+// }
 
-func (kvstore *KeyValueStore) Put(key string, value string) {
-	kvstore.kvstore[key] = value
-}
+// func (bellDB *BellDB) Put(key string, value string) {
+// 	bellDB.bellDB[key] = value
+// }
 
-func (keyvaluestore *KeyValueStore) Get(key string) (string, bool) {
-	value, ok := keyvaluestore.kvstore[key]
-	return value, ok
-}
+// func (bellDB *BellDB) Get(key string) (string, bool) {
+// 	value, ok := bellDB.bellDB[key]
+// 	return value, ok
+// }
 
-func (keyvaluestore *KeyValueStore) Delete(key string) {
-	delete(keyvaluestore.kvstore, key)
-}
+// func (bellDB *BellDB) Delete(key string) {
+// 	delete(bellDB.bellDB, key)
+// }
 
-func (kvstore *KeyValueStore) Save(filename string) error {
-	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+// func (bellDB *BellDB) Save(filename string) error {
+// 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
-	if err != nil {
-		return err
-	}
+// 	if err != nil {
+// 		return err
+// 	}
 
-	defer file.Close()
+// 	defer file.Close()
 
-	for key, value := range kvstore.kvstore {
-		_, err := file.WriteString(fmt.Sprintf("%s:%s\n", key, value))
+// 	for key, value := range kvstore.kvstore {
+// 		_, err := file.WriteString(fmt.Sprintf("%s:%s\n", key, value))
 
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
+// 		if err != nil {
+// 			return err
+// 		}
+// 	}
+// 	return nil
+// }
 
-func (kvstore *KeyValueStore) Read(filename string) error {
-	file, err := os.Open(filename)
+// func (kvstore *KeyValueStore) Read(filename string) error {
+// 	file, err := os.Open(filename)
 
-	if err != nil {
-		return err
-	}
+// 	if err != nil {
+// 		return err
+// 	}
 
-	scanner := bufio.NewScanner(file)
+// 	scanner := bufio.NewScanner(file)
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		words := strings.Split(line, ":")
+// 	for scanner.Scan() {
+// 		line := scanner.Text()
+// 		words := strings.Split(line, ":")
 
-		if len(words) == 2 {
-			fmt.Println(words)
-			kvstore.Put(words[0], words[1])
-		}
-	}
-	return scanner.Err()
-}
+// 		if len(words) == 2 {
+// 			fmt.Println(words)
+// 			kvstore.Put(words[0], words[1])
+// 		}
+// 	}
+// 	return scanner.Err()
+// }
 
 func main() {
 
-	kvstore := NewKeyValueStore()
+	bellDB := belldb.GetInstance()
 
-	kvstore.Put("name1", "hello1")
-	kvstore.Put("name2", "hello2")
-	kvstore.Put("name3", "hello3")
+	bellDB.Put("name1", "hello1")
+	bellDB.Put("name2", "hello2")
+	bellDB.Put("name3", "hello3")
 
-	fmt.Println(kvstore.kvstore)
+	// fmt.Println(kvstore.kvstore)
 
-	fmt.Println(kvstore.Get("name3"))
+	// fmt.Println(kvstore.Get("name3"))
 
-	fmt.Println(kvstore.Save("test.dat"))
+	fmt.Println(bellDB.Save("test.db"))
 
-	kvstore.Read("test.dat")
+	// kvstore.Read("test.dat")
 
-	fmt.Println(kvstore.kvstore)
+	// fmt.Println(kvstore.kvstore)
 }

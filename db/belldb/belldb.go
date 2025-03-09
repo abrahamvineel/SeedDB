@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/vmihailenco/msgpack"
 )
@@ -56,11 +55,13 @@ func (bellDB *BellDB) Save(filename string) error {
 		}
 
 		serializeRec, serErr := msgpack.Marshal(record)
+		serializeRec = append(serializeRec, '\n')
+
 		if err != nil {
 			return serErr
 		}
 
-		_, recErr := file.WriteString(string(serializeRec))
+		_, recErr := file.Write(serializeRec)
 
 		if recErr != nil {
 			return recErr
@@ -79,13 +80,16 @@ func (bellDB *BellDB) Read(filename string) error {
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
-		line := scanner.Text()
-		words := strings.Split(line, ":")
+		serializedData := scanner.Bytes()
+		var record DBRecord
+		err = msgpack.Unmarshal(serializedData, &record)
 
-		if len(words) == 2 {
-			fmt.Println(words)
-			bellDB.Put(words[0], words[1])
+		if err != nil {
+			fmt.Println("Deserialization error", err)
+			continue
 		}
+
+		fmt.Printf("Deserialized Record: Key = %s, Value = %s\n", record.Key, record.Value)
 	}
 	return scanner.Err()
 }

@@ -11,7 +11,6 @@ need to implement inserting values to dat file format for sstables*/
 package main
 
 import (
-	"fmt"
 	"kv_store/db/belldb"
 )
 
@@ -88,7 +87,9 @@ func main() {
 
 	// fmt.Println(kvstore.Get("name3"))
 
-	fmt.Println(bellDB.Save("test.db"))
+	bellDB.Save("test.db")
+
+	bellDB.Read("test.db")
 
 	// kvstore.Read("test.dat")
 

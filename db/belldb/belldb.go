@@ -57,7 +57,7 @@ func (bellDB *BellDB) Save(filename string) error {
 		serializeRec, serErr := msgpack.Marshal(record)
 		serializeRec = append(serializeRec, '\n')
 
-		if err != nil {
+		if serErr != nil {
 			return serErr
 		}
 

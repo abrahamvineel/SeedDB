@@ -21,6 +21,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -46,13 +47,32 @@ type CheckPointLogRecord struct {
 	CRC               uint32
 }
 
+type TransactionTableRecord struct {
+	TransactionId uint64
+	CheckpointLSN uint64
+	Status        TTStatus
+}
+
+type TTStatus byte
+
 const (
-	insert byte = 1
-	update byte = 2
-	delete byte = 3
+	BEGIN      TTStatus = 1
+	COMMIT     TTStatus = 2
+	CHECKPOINT TTStatus = 3
+	ROLLBACK   TTStatus = 4
+	ABORT      TTStatus = 5
 )
 
-func (wal *WAL) createLogRecord(operation byte, value string) (*LogRecord, error) {
+type Operation byte
+
+const (
+	INSERT  Operation = 1
+	UPDATE  Operation = 2
+	DELETE  Operation = 3
+	INVALID Operation = 4
+)
+
+func (wal *WAL) createLogRecord(operation string, value string) (*LogRecord, error) {
 	//generate lsn
 	currOffset, err := wal.file.Seek(0, io.SeekCurrent)
 	if err != nil {
@@ -60,8 +80,13 @@ func (wal *WAL) createLogRecord(operation byte, value string) (*LogRecord, error
 	}
 
 	var buffer bytes.Buffer
+	op, opErr := mapOperation(operation)
 
-	buffer.WriteByte(operation)
+	if opErr != nil {
+		return nil, opErr
+	}
+
+	buffer.WriteByte(byte(op))
 
 	valueLen := uint32(len(value))
 	binary.Write(&buffer, binary.LittleEndian, valueLen)
@@ -81,6 +106,17 @@ func (wal *WAL) createLogRecord(operation byte, value string) (*LogRecord, error
 	}
 
 	return record, nil
+}
+
+func mapOperation(operation string) (Operation, error) {
+	if operation == "insert" {
+		return INSERT, nil
+	} else if operation == "update" {
+		return UPDATE, nil
+	} else if operation == "delete" {
+		return DELETE, nil
+	}
+	return INVALID, errors.New("invalid operation")
 }
 
 func (wal *WAL) sequentialWrite(record *LogRecord) (*WAL, error) {
@@ -119,7 +155,7 @@ func (wal *WAL) batchWrite(logRecords []LogRecord) error {
 	return nil
 }
 
-func (wal *WAL) createCheckpoint(logRecord *LogRecord, filePath string) error {
+func (wal *WAL) createCheckpoint(filePath string) error {
 
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
 
@@ -181,7 +217,7 @@ func main() {
 		return
 	}
 
-	logRecord, _ := wal.createLogRecord(1, "hello:world")
+	logRecord, _ := wal.createLogRecord("insert", "hello:world")
 	wal.sequentialWrite(logRecord)
 
 	defer wal.file.Close()

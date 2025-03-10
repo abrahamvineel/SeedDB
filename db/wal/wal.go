@@ -27,6 +27,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/bwmarrin/snowflake"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -80,7 +81,7 @@ func (wal *WAL) createLogRecord(operation string, value string) (*LogRecord, err
 	}
 
 	var buffer bytes.Buffer
-	op, opErr := mapOperation(operation)
+	op, opErr := operationMapper(operation)
 
 	if opErr != nil {
 		return nil, opErr
@@ -108,7 +109,7 @@ func (wal *WAL) createLogRecord(operation string, value string) (*LogRecord, err
 	return record, nil
 }
 
-func mapOperation(operation string) (Operation, error) {
+func operationMapper(operation string) (Operation, error) {
 	if operation == "insert" {
 		return INSERT, nil
 	} else if operation == "update" {
@@ -193,6 +194,24 @@ func (wal *WAL) createCheckpoint(filePath string) error {
 }
 
 //crash recover to be implemented
+
+func (cpRecord *CheckPointLogRecord) transactionTableInsert() {
+
+	//1 is machine id
+	node, err := snowflake.NewNode(1)
+	if err != nil {
+		return
+	}
+
+	txnId := node.Generate()
+
+	ttRecord := &TransactionTableRecord{
+		TransactionId: txnId,
+		CheckpointLSN: cpRecord.CheckpointLSN,
+		Status:        BEGIN,
+	}
+
+}
 
 func NewWAL(filePath string) (*WAL, error) {
 

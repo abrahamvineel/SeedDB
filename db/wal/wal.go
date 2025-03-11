@@ -26,6 +26,7 @@ import (
 	"hash/crc32"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/bwmarrin/snowflake"
 	"github.com/vmihailenco/msgpack/v5"
@@ -52,6 +53,12 @@ type TransactionTableRecord struct {
 	TransactionId uint64
 	CheckpointLSN uint64
 	Status        TTStatus
+}
+
+type TransactionTable struct {
+	mu    sync.Mutex
+	Table map[int64]*TransactionTableRecord
+	file  *os.File
 }
 
 type TTStatus byte
@@ -211,6 +218,10 @@ func (cpRecord *CheckPointLogRecord) transactionTableInsert() {
 		Status:        BEGIN,
 	}
 
+}
+
+func createTransactionTable(filename string) (*TransactionTableRecord, error) {
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 }
 
 func NewWAL(filePath string) (*WAL, error) {

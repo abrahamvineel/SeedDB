@@ -202,7 +202,10 @@ func (wal *WAL) createCheckpoint(filePath string) error {
 
 //crash recover to be implemented
 
-func (cpRecord *CheckPointLogRecord) transactionTableInsert() {
+func (tt *TransactionTable) transactionTableInsert(cpRecord *CheckPointLogRecord) {
+
+	tt.mu.Lock()
+	defer tt.mu.Unlock()
 
 	//1 is machine id
 	node, err := snowflake.NewNode(1)
@@ -212,16 +215,29 @@ func (cpRecord *CheckPointLogRecord) transactionTableInsert() {
 
 	txnId := node.Generate()
 
-	ttRecord := &TransactionTableRecord{
+	tt.Table[txnId] = &TransactionTableRecord{
 		TransactionId: txnId,
 		CheckpointLSN: cpRecord.CheckpointLSN,
 		Status:        BEGIN,
 	}
 
+	record := fmt.Sprintf("%d, %d, %d\n", txnId, cpRecord.CheckpointLSN, BEGIN)
+
+	tt.file.WriteString(record)
+	tt.file.Sync()
 }
 
-func createTransactionTable(filename string) (*TransactionTableRecord, error) {
+func createTransactionTable(filename string) (*TransactionTable, error) {
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &TransactionTable{
+		Table: make(map[int64]*TransactionTableRecord),
+		file:  file,
+	}, nil
 }
 
 func NewWAL(filePath string) (*WAL, error) {

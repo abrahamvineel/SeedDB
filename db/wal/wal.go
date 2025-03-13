@@ -19,6 +19,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"errors"
@@ -26,6 +27,8 @@ import (
 	"hash/crc32"
 	"io"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/bwmarrin/snowflake"
@@ -57,30 +60,31 @@ type TransactionTableRecord struct {
 
 type TransactionTable struct {
 	mu    sync.Mutex
-	Table map[int64]*TransactionTableRecord
+	Table map[int]*TransactionTableRecord
 	file  *os.File
 }
 
 type TTStatus byte
 
 const (
-	BEGIN      TTStatus = 1
-	COMMIT     TTStatus = 2
-	CHECKPOINT TTStatus = 3
-	ROLLBACK   TTStatus = 4
-	ABORT      TTStatus = 5
+	BEGIN          TTStatus = 1
+	COMMIT         TTStatus = 2
+	CHECKPOINT     TTStatus = 3
+	ROLLBACK       TTStatus = 4
+	ABORT          TTStatus = 5
+	INVALID_STATUS TTStatus = 4
 )
 
 type Operation byte
 
 const (
-	INSERT  Operation = 1
-	UPDATE  Operation = 2
-	DELETE  Operation = 3
-	INVALID Operation = 4
+	INSERT            Operation = 1
+	UPDATE            Operation = 2
+	DELETE            Operation = 3
+	INVALID_OPERATION Operation = 4
 )
 
-func (wal *WAL) createLogRecord(operation string, value string) (*LogRecord, error) {
+func (wal *WAL) createLogRecord(operation int, value string) (*LogRecord, error) {
 	//generate lsn
 	currOffset, err := wal.file.Seek(0, io.SeekCurrent)
 	if err != nil {
@@ -116,15 +120,30 @@ func (wal *WAL) createLogRecord(operation string, value string) (*LogRecord, err
 	return record, nil
 }
 
-func operationMapper(operation string) (Operation, error) {
-	if operation == "insert" {
+func operationMapper(operation int) (Operation, error) {
+	if operation == 1 {
 		return INSERT, nil
-	} else if operation == "update" {
+	} else if operation == 2 {
 		return UPDATE, nil
-	} else if operation == "delete" {
+	} else if operation == 3 {
 		return DELETE, nil
 	}
-	return INVALID, errors.New("invalid operation")
+	return INVALID_OPERATION, errors.New("invalid operation")
+}
+
+func statusMapper(status int) (TTStatus, error) {
+	if status == 1 {
+		return BEGIN, nil
+	} else if status == 2 {
+		return COMMIT, nil
+	} else if status == 3 {
+		return CHECKPOINT, nil
+	} else if status == 4 {
+		return ROLLBACK, nil
+	} else if status == 5 {
+		return ABORT, nil
+	}
+	return INVALID_STATUS, errors.New("invalid status")
 }
 
 func (wal *WAL) sequentialWrite(record *LogRecord) (*WAL, error) {
@@ -221,7 +240,7 @@ func (tt *TransactionTable) transactionTableInsert(cpRecord *CheckPointLogRecord
 		Status:        BEGIN,
 	}
 
-	record := fmt.Sprintf("%d, %d, %d\n", txnId, cpRecord.CheckpointLSN, BEGIN)
+	record := fmt.Sprintf("%d|%d|%d\n", txnId, cpRecord.CheckpointLSN, BEGIN)
 
 	tt.file.WriteString(record)
 	tt.file.Sync()
@@ -235,9 +254,29 @@ func createTransactionTable(filename string) (*TransactionTable, error) {
 	}
 
 	return &TransactionTable{
-		Table: make(map[int64]*TransactionTableRecord),
+		Table: make(map[int]*TransactionTableRecord),
 		file:  file,
 	}, nil
+}
+
+func (tt *TransactionTable) loadTransactionTable() map[int]string {
+	tt.mu.Lock()
+	defer tt.mu.Unlock()
+
+	scanner := bufio.NewScanner(tt.file)
+
+	for scanner.Scan() {
+		parts := strings.Split(scanner.Text(), "|")
+		txnId, _ := strconv.Atoi(parts[0])
+		status := parts[2]
+
+		record := &TransactionTableRecord{
+			TransactionId: uint64(txnId),
+			Status:        statusMapper(status),
+		}
+		tt.Table[txnId] = status
+	}
+	return tt.Table
 }
 
 func NewWAL(filePath string) (*WAL, error) {

@@ -131,7 +131,7 @@ func operationMapper(operation int) (Operation, error) {
 	return INVALID_OPERATION, errors.New("invalid operation")
 }
 
-func statusMapper(status int) (TTStatus, error) {
+func statusMapper(status uint8) (TTStatus, error) {
 	if status == 1 {
 		return BEGIN, nil
 	} else if status == 2 {
@@ -259,7 +259,7 @@ func createTransactionTable(filename string) (*TransactionTable, error) {
 	}, nil
 }
 
-func (tt *TransactionTable) loadTransactionTable() map[int]string {
+func (tt *TransactionTable) loadTransactionTable() map[int]*TransactionTableRecord {
 	tt.mu.Lock()
 	defer tt.mu.Unlock()
 
@@ -268,15 +268,42 @@ func (tt *TransactionTable) loadTransactionTable() map[int]string {
 	for scanner.Scan() {
 		parts := strings.Split(scanner.Text(), "|")
 		txnId, _ := strconv.Atoi(parts[0])
-		status := parts[2]
+		status, _ := strconv.ParseInt(parts[2], 10, 8)
 
+		mappedStatus, _ := statusMapper(uint8(status))
 		record := &TransactionTableRecord{
 			TransactionId: uint64(txnId),
-			Status:        statusMapper(status),
+			Status:        mappedStatus,
 		}
-		tt.Table[txnId] = status
+		tt.Table[txnId] = record
 	}
 	return tt.Table
+}
+
+func (tt *TransactionTable) commitTransactions() error {
+	tt.mu.Lock()
+	defer tt.mu.Unlock()
+
+	var lastRecord TransactionTableRecord
+
+	for txnId := range tt.Table {
+		record := tt.Table[txnId]
+		record.Status = COMMIT
+		tt.Table[txnId] = record
+		lastRecord = *record
+	}
+
+	err := tt.file.Truncate(0)
+	if err != nil {
+		return fmt.Errorf("Failed to truncate the file")
+	}
+
+	tt.file.Seek(0, 0)
+
+	record := fmt.Sprintf("%d|%d|%d\n", lastRecord.TransactionId, lastRecord.CheckpointLSN, lastRecord.Status)
+	tt.file.WriteString(record)
+
+	return nil
 }
 
 func NewWAL(filePath string) (*WAL, error) {
@@ -302,7 +329,7 @@ func main() {
 		return
 	}
 
-	logRecord, _ := wal.createLogRecord("insert", "hello:world")
+	logRecord, _ := wal.createLogRecord(1, "hello:world")
 	wal.sequentialWrite(logRecord)
 
 	defer wal.file.Close()

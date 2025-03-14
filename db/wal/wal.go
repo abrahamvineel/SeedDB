@@ -306,6 +306,8 @@ func (tt *TransactionTable) commitTransactions() error {
 	return nil
 }
 
+// dirty page table
+
 func NewWAL(filePath string) (*WAL, error) {
 
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)

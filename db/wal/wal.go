@@ -41,9 +41,20 @@ type LogRecord struct {
 	CRC               uint32
 }
 
+// type LogRecord struct {
+// 	LogSequenceNumber uint64
+// 	TransactionId     uint64
+// 	Operation         byte
+// 	Key               []byte
+// 	Value             []byte
+// 	Timestamp         int64
+// 	CRC               uint32
+// }
+
 type WAL struct {
 	file                  *os.File
 	LastLogSequenceNumber uint64
+	mu                    sync.Mutex
 }
 
 type CheckPointLogRecord struct {
@@ -147,6 +158,8 @@ func statusMapper(status uint8) (TTStatus, error) {
 }
 
 func (wal *WAL) sequentialWrite(record *LogRecord) (*WAL, error) {
+	wal.mu.Lock()
+	defer wal.mu.Unlock()
 
 	//serialize the record
 	serializeRec, err := msgpack.Marshal(record)
@@ -163,6 +176,8 @@ func (wal *WAL) sequentialWrite(record *LogRecord) (*WAL, error) {
 }
 
 func (wal *WAL) batchWrite(logRecords []LogRecord) error {
+	wal.mu.Lock()
+	defer wal.mu.Unlock()
 
 	for _, record := range logRecords {
 

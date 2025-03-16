@@ -3,6 +3,7 @@ package belldb
 import (
 	"bufio"
 	"fmt"
+	"hash/crc32"
 	"os"
 
 	"github.com/vmihailenco/msgpack"
@@ -34,6 +35,7 @@ type DBRecord struct {
 	Key         string
 	ValueLength uint32
 	Value       string
+	CRC         uint32
 }
 
 func (bellDB *BellDB) Save(filename string) error {
@@ -47,11 +49,15 @@ func (bellDB *BellDB) Save(filename string) error {
 
 	for key, value := range bellDB.bellDB {
 
+		data := []byte(key + value)
+		checksum := crc32.ChecksumIEEE(data)
+
 		record := DBRecord{
 			KeyLength:   uint32(len(key)),
 			Key:         key,
 			ValueLength: uint32(len(value)),
 			Value:       value,
+			CRC:         checksum,
 		}
 
 		serializeRec, serErr := msgpack.Marshal(record)

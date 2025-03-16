@@ -9,13 +9,21 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 
+	"github.com/bwmarrin/snowflake"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
 type LogRecord struct {
 	LogSequenceNumber uint64
-	Data              []byte
+	TransactionId     uint64
+	Operation         byte
+	KeyLength         uint32
+	Key               string
+	ValueLength       uint32
+	Value             string
+	Timestamp         int64
 	CRC               uint32
 }
 
@@ -40,7 +48,7 @@ const (
 	INVALID_OPERATION Operation = 4
 )
 
-func (wal *WAL) createLogRecord(operation int, value string) (*LogRecord, error) {
+func (wal *WAL) createLogRecord(operation int, key string, value string) (*LogRecord, error) {
 	//generate lsn
 	currOffset, err := wal.file.Seek(0, io.SeekCurrent)
 	if err != nil {
@@ -56,20 +64,30 @@ func (wal *WAL) createLogRecord(operation int, value string) (*LogRecord, error)
 
 	buffer.WriteByte(byte(op))
 
-	valueLen := uint32(len(value))
-	binary.Write(&buffer, binary.LittleEndian, valueLen)
-	buffer.Write([]byte(value))
+	// valueLen := uint32(len(value))
+	// binary.Write(&buffer, binary.LittleEndian, valueLen)
+	// buffer.Write([]byte(value))
 
-	data := buffer.Bytes()
+	data := []byte(key + value)
 
 	//calculate checksum
-	crc32Hash := crc32.NewIEEE()
-	crc32Hash.Write(data)
-	checksum := crc32Hash.Sum32()
+	checksum := crc32.ChecksumIEEE(data)
+
+	node, err := snowflake.NewNode(1)
+	if err != nil {
+		return nil, err
+	}
+	txnId := node.Generate()
 
 	record := &LogRecord{
 		LogSequenceNumber: uint64(currOffset),
-		Data:              data,
+		TransactionId:     txnId,
+		Operation:         byte(operation),
+		KeyLength:         uint32(len(key)),
+		Key:               key,
+		ValueLength:       uint32(len(value)),
+		Value:             value,
+		Timestamp:         time.Now().UnixMilli(),
 		CRC:               checksum,
 	}
 

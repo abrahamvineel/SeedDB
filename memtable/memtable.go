@@ -1,0 +1,1 @@
+//memetable init

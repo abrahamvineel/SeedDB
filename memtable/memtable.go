@@ -10,22 +10,21 @@ type SkipList struct {
 }
 
 func (skipList *SkipList) search(key string) (string, bool) {
-
 	if skipList == nil {
 		return "", false
 	}
+
 	currList := skipList
 	for currList != nil {
-		if skipList.Key == key {
-			return skipList.Value
+
+		for currList.Right != nil && currList.Right.Value <= key {
+			currList = currList.Right
 		}
-		if skipList.Key < key {
-			skipList = skipList.Right
-		} else if skipList.Key > key {
-			skipList = skipList.Left
-		} else {
-			skipList = skipList.Down
+
+		if currList.Key == key {
+			return currList.Value, true
 		}
+		currList = currList.Down
 	}
-	return ""
+	return "", false
 }

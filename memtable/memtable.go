@@ -9,8 +9,13 @@ type SkipList struct {
 	Right *SkipList
 }
 
-func (skipList *SkipList) search(key string) string {
-	for skipList.Right != nil {
+func (skipList *SkipList) search(key string) (string, bool) {
+
+	if skipList == nil {
+		return "", false
+	}
+	currList := skipList
+	for currList != nil {
 		if skipList.Key == key {
 			return skipList.Value
 		}

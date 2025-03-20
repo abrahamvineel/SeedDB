@@ -28,3 +28,7 @@ func (skipList *SkipList) search(key string) (string, bool) {
 	}
 	return "", false
 }
+
+func insert() {
+
+}

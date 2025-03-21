@@ -1,34 +1,50 @@
 // memetable init
 package memtable
 
-type SkipList struct {
+type SkipListNode struct {
 	Key   string
 	Value string
-	Down  *SkipList
-	Left  *SkipList
-	Right *SkipList
+	Down  *SkipListNode
+	Right *SkipListNode
 }
 
-func (skipList *SkipList) search(key string) (string, bool) {
-	if skipList == nil {
-		return "", false
+type SkipList struct {
+	Head  *SkipListNode
+	Level int
+}
+
+func NewSkipList() *SkipList {
+	return &SkipList{
+		Head:  &SkipListNode{Key: "", Value: "", Right: nil, Down: nil},
+		Level: 1,
+	}
+}
+
+func (s *SkipList) Search(key string) (*SkipListNode, bool) {
+	if s == nil {
+		return nil, false
 	}
 
-	currList := skipList
+	currList := s.Head
 	for currList != nil {
 
 		for currList.Right != nil && currList.Right.Value <= key {
 			currList = currList.Right
 		}
 
-		if currList.Key == key {
-			return currList.Value, true
+		if currList.Right != nil && currList.Key == key {
+			return currList.Right, true
 		}
 		currList = currList.Down
 	}
-	return "", false
+	return nil, false
 }
 
-func insert() {
+func insert(key string, value string) {
+	skipList := Search(key)
+
+}
+
+func delete() {
 
 }

@@ -28,11 +28,11 @@ func (s *SkipList) Search(key string) (*SkipListNode, bool) {
 	currList := s.Head
 	for currList != nil {
 
-		for currList.Right != nil && currList.Right.Value <= key {
+		for currList.Right != nil && currList.Right.Key < key {
 			currList = currList.Right
 		}
 
-		if currList.Right != nil && currList.Key == key {
+		if currList.Right != nil && currList.Right.Key == key {
 			return currList.Right, true
 		}
 		currList = currList.Down
@@ -40,8 +40,23 @@ func (s *SkipList) Search(key string) (*SkipListNode, bool) {
 	return nil, false
 }
 
-func insert(key string, value string) {
-	skipList := Search(key)
+func (s *SkipList) insert(key string, value string) {
+	var stack []*SkipListNode
+	curr := s.Head
+
+	for curr != nil {
+
+		for curr.Right != nil && curr.Right.Key < key {
+			curr = curr.Right
+		}
+		stack = append(stack, curr)
+
+		curr = curr.Down
+	}
+
+	insertAtLastLevel := (*SkipListNode)(nil)
+	isInserted := true
+	level := 0
 
 }
 

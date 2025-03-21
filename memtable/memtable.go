@@ -1,6 +1,11 @@
 // memetable init
 package memtable
 
+import (
+	"math/rand"
+	"time"
+)
+
 type SkipListNode struct {
 	Key   string
 	Value string
@@ -54,10 +59,40 @@ func (s *SkipList) insert(key string, value string) {
 		curr = curr.Down
 	}
 
-	insertAtLastLevel := (*SkipListNode)(nil)
+	nextLevelNode := (*SkipListNode)(nil)
 	isInserted := true
 	level := 0
 
+	rand.Seed(time.Now().UnixNano())
+
+	for isInserted && level < len(stack) {
+		prev := stack[len(stack)-1-level]
+		stack = stack[:len(stack)-1]
+
+		newNode := &SkipListNode{
+			Key:   key,
+			Value: value,
+			Right: prev.Right,
+			Down:  nextLevelNode,
+		}
+
+		prev.Right = newNode
+		nextLevelNode = newNode
+
+		if rand.Intn(2) == 1 {
+			isInserted = true
+		} else {
+			isInserted = false
+		}
+
+		level++
+	}
+
+	if isInserted {
+		newHead := &SkipListNode{Right: nil, Down: s.Head}
+		s.Head = newHead
+		s.Level++
+	}
 }
 
 func delete() {

@@ -95,6 +95,29 @@ func (s *SkipList) insert(key string, value string) {
 	}
 }
 
-func delete() {
+func (s *SkipList) delete(key string) bool {
+	curr := s.Head
+	isDeleted := false
 
+	for curr != nil {
+
+		for curr.Right != nil && curr.Right.Key < key {
+			curr = curr.Right
+		}
+
+		if curr.Right != nil && curr.Right.Key == key {
+			curr.Right = curr.Right.Right
+			isDeleted = true
+		}
+
+		curr = curr.Down
+	}
+
+	if isDeleted {
+		for s.Head.Right == nil && s.Head.Down != nil {
+			s.Head = s.Head.Down
+			s.Level--
+		}
+	}
+	return isDeleted
 }

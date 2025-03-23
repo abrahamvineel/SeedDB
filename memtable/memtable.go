@@ -1,10 +1,39 @@
-// memetable init
 package memtable
 
 import (
 	"math/rand"
+	"sync"
 	"time"
 )
+
+type Memtable struct {
+	skiplist *SkipList
+	mu       sync.RWMutex
+}
+
+func NewMemtable() *Memtable {
+	return &Memtable{
+		skiplist: newSkipList(),
+	}
+}
+
+func (m *Memtable) Put(key string, value string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.skiplist.insert(key, value)
+}
+
+func (m *Memtable) Get(key string) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	m.skiplist.search(key)
+}
+
+func (m *Memtable) Delete(key string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.skiplist.insert(key, "DEL")
+}
 
 type SkipListNode struct {
 	Key       string
@@ -19,14 +48,14 @@ type SkipList struct {
 	Level int
 }
 
-func NewSkipList() *SkipList {
+func newSkipList() *SkipList {
 	return &SkipList{
 		Head:  &SkipListNode{Key: "", Value: "", Right: nil, Down: nil},
 		Level: 1,
 	}
 }
 
-func (s *SkipList) Search(key string) (*SkipListNode, bool) {
+func (s *SkipList) search(key string) (*SkipListNode, bool) {
 	if s == nil {
 		return nil, false
 	}
@@ -72,9 +101,13 @@ func (s *SkipList) insert(key string, value string) {
 		curr = curr.Down
 	}
 
-	if isFound && existingNode != nil {
-		existingNode.Value = value
-		existingNode.Tombstone = false
+	if isFound {
+		if value == "DEL" {
+			existingNode.Tombstone = true
+		} else {
+			existingNode.Value = value
+			existingNode.Tombstone = false
+		}
 		return
 	}
 
@@ -112,25 +145,4 @@ func (s *SkipList) insert(key string, value string) {
 		s.Head = newHead
 		s.Level++
 	}
-}
-
-func (s *SkipList) delete(key string) bool {
-	curr := s.Head
-	isDeleted := false
-
-	for curr != nil {
-
-		for curr.Right != nil && curr.Right.Key < key {
-			curr = curr.Right
-		}
-
-		if curr.Right != nil && curr.Right.Key == key {
-			curr.Right.Tombstone = true
-			isDeleted = true
-		}
-
-		curr = curr.Down
-	}
-
-	return isDeleted
 }

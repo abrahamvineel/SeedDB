@@ -7,10 +7,11 @@ import (
 )
 
 type SkipListNode struct {
-	Key   string
-	Value string
-	Down  *SkipListNode
-	Right *SkipListNode
+	Key       string
+	Value     string
+	Tombstone bool
+	Down      *SkipListNode
+	Right     *SkipListNode
 }
 
 type SkipList struct {

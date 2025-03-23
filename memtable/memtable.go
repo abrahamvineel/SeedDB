@@ -39,6 +39,9 @@ func (s *SkipList) Search(key string) (*SkipListNode, bool) {
 		}
 
 		if currList.Right != nil && currList.Right.Key == key {
+			if currList.Right.Tombstone {
+				return nil, false
+			}
 			return currList.Right, true
 		}
 		currList = currList.Down
@@ -47,17 +50,32 @@ func (s *SkipList) Search(key string) (*SkipListNode, bool) {
 }
 
 func (s *SkipList) insert(key string, value string) {
+
 	var stack []*SkipListNode
 	curr := s.Head
+	var existingNode *SkipListNode
+	isFound := false
 
 	for curr != nil {
 
 		for curr.Right != nil && curr.Right.Key < key {
 			curr = curr.Right
 		}
+
+		if curr.Right != nil && curr.Right.Key == key {
+			existingNode = curr.Right
+			isFound = true
+		}
+
 		stack = append(stack, curr)
 
 		curr = curr.Down
+	}
+
+	if isFound && existingNode != nil {
+		existingNode.Value = value
+		existingNode.Tombstone = false
+		return
 	}
 
 	nextLevelNode := (*SkipListNode)(nil)
@@ -107,18 +125,12 @@ func (s *SkipList) delete(key string) bool {
 		}
 
 		if curr.Right != nil && curr.Right.Key == key {
-			curr.Right = curr.Right.Right
+			curr.Right.Tombstone = true
 			isDeleted = true
 		}
 
 		curr = curr.Down
 	}
 
-	if isDeleted {
-		for s.Head.Right == nil && s.Head.Down != nil {
-			s.Head = s.Head.Down
-			s.Level--
-		}
-	}
 	return isDeleted
 }

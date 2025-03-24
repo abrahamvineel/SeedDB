@@ -2,6 +2,7 @@ package memtable
 
 import (
 	"math/rand"
+	"os"
 	"sync"
 	"time"
 )
@@ -9,6 +10,28 @@ import (
 type Memtable struct {
 	skiplist *SkipList
 	mu       sync.RWMutex
+}
+
+type SSTable struct {
+	file *os.File
+}
+
+type SSTableHeader struct {
+	MagicNumber      uint32
+	DataBlockOffset  uint64
+	IndexBlockOffset uint64
+}
+
+type DataBlockEntry struct {
+	KeyLength   uint32
+	Key         string
+	ValueLength uint32
+	Value       string
+}
+
+type IndexBlockEntry struct {
+	Key    string
+	Offset uint64
 }
 
 func NewMemtable() *Memtable {

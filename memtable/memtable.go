@@ -146,3 +146,29 @@ func (s *SkipList) insert(key string, value string) {
 		s.Level++
 	}
 }
+
+func (s *SkipList) getLastLevelList() *SkipListNode {
+	curr := s.Head
+	for curr.Down != nil {
+		curr = curr.Down
+	}
+	return curr
+}
+
+func (m *Memtable) FlushToSSTable() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	it := m.skiplist.getLastLevelList()
+
+	for it.Right != nil {
+		key := it.Key
+		value := it.Value
+
+		if value != "DEL" {
+			writeToSSTable(key, value)
+		}
+	}
+
+	m.skiplist = newSkipList()
+}

@@ -1,19 +1,20 @@
 package memtable
 
 import (
+	"encoding/binary"
 	"math/rand"
 	"os"
 	"sync"
 	"time"
 )
 
+const (
+	FILEPATH = "sstable_"
+)
+
 type Memtable struct {
 	skiplist *SkipList
 	mu       sync.RWMutex
-}
-
-type SSTable struct {
-	file *os.File
 }
 
 type SSTableHeader struct {
@@ -184,14 +185,51 @@ func (m *Memtable) FlushToSSTable() {
 
 	it := m.skiplist.getLastLevelList()
 
+	var dataBlockEntries []*DataBlockEntry
+
 	for it.Right != nil {
 		key := it.Key
 		value := it.Value
+		keyLen := uint32(len(key))
+		valueLen := uint32(len(value))
 
 		if value != "DEL" {
-			writeToSSTable(key, value)
+			dataBlockEntries = append(dataBlockEntries,
+				&DataBlockEntry{KeyLength: keyLen, Key: key, ValueLength: valueLen, Value: value})
 		}
 	}
 
+	WriteToSSTable(dataBlockEntries)
+
 	m.skiplist = newSkipList()
+}
+
+func WriteToSSTable(datablockEntry []*DataBlockEntry) error {
+
+	file, err := os.Create(FILEPATH + time.Now().Format(time.RFC3339) + ".db")
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	var indexBlockEntry []IndexBlockEntry
+	dataBlockOffset := uint64(12)
+
+	for _, entry := range datablockEntry {
+		offset := dataBlockOffset
+
+		indexBlockEntry = append(indexBlockEntry, IndexBlockEntry{Key: entry.Key, Offset: offset})
+
+		keyLen := entry.KeyLength
+		valueLen := entry.ValueLength
+
+		binary.Write(file, binary.LittleEndian, keyLen)
+		file.WriteString(entry.Key)
+		binary.Write(file, binary.LittleEndian, valueLen)
+		file.WriteString(entry.Value)
+
+		dataBlockOffset += 4 + keyLen + valueLen
+	}
+	return nil
 }

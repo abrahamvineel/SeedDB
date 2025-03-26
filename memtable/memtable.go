@@ -213,13 +213,13 @@ func WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 
 	defer file.Close()
 
-	var indexBlockEntry []IndexBlockEntry
+	var indexBlockEntries []IndexBlockEntry
 	dataBlockOffset := uint64(12)
 
 	for _, entry := range datablockEntry {
 		offset := dataBlockOffset
 
-		indexBlockEntry = append(indexBlockEntry, IndexBlockEntry{Key: entry.Key, Offset: offset})
+		indexBlockEntries = append(indexBlockEntries, IndexBlockEntry{Key: entry.Key, Offset: offset})
 
 		keyLen := entry.KeyLength
 		valueLen := entry.ValueLength
@@ -230,6 +230,10 @@ func WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 		file.WriteString(entry.Value)
 
 		dataBlockOffset += 4 + keyLen + valueLen
+	}
+
+	for _, entry := range indexBlockEntries {
+
 	}
 	return nil
 }

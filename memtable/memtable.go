@@ -233,7 +233,7 @@ func WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 	}
 
 	for _, entry := range indexBlockEntries {
-
+		keyLen := uint32(len(entry.Key))
 	}
 	return nil
 }

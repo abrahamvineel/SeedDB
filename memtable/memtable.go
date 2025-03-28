@@ -24,9 +24,9 @@ type SSTableHeader struct {
 }
 
 type DataBlockEntry struct {
-	KeyLength   uint32
+	KeyLength   uint64
 	Key         string
-	ValueLength uint32
+	ValueLength uint64
 	Value       string
 }
 
@@ -190,8 +190,8 @@ func (m *Memtable) FlushToSSTable() {
 	for it.Right != nil {
 		key := it.Key
 		value := it.Value
-		keyLen := uint32(len(key))
-		valueLen := uint32(len(value))
+		keyLen := uint64(len(key))
+		valueLen := uint64(len(value))
 
 		if value != "DEL" {
 			dataBlockEntries = append(dataBlockEntries,
@@ -232,8 +232,22 @@ func WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 		dataBlockOffset += 4 + keyLen + valueLen
 	}
 
+	indexBlockOffset := dataBlockOffset
+
 	for _, entry := range indexBlockEntries {
 		keyLen := uint32(len(entry.Key))
+		binary.Write(file, binary.LittleEndian, keyLen)
+		file.WriteString(entry.Key)
+		binary.Write(file, binary.LittleEndian, entry.Offset)
 	}
+
+	file.Seek(0, 0)
+	header := SSTableHeader{
+		MagicNumber:      123123,
+		DataBlockOffset:  12,
+		IndexBlockOffset: indexBlockOffset,
+	}
+
+	binary.Write(file, binary.LittleEndian, header)
 	return nil
 }

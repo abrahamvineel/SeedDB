@@ -251,3 +251,7 @@ func WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 	binary.Write(file, binary.LittleEndian, header)
 	return nil
 }
+
+func LoadSSTable() {
+
+}

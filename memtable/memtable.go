@@ -17,6 +17,11 @@ type Memtable struct {
 	mu       sync.RWMutex
 }
 
+type SSTable struct {
+	file  *os.File
+	index map[string]int64
+}
+
 type SSTableHeader struct {
 	MagicNumber      uint32
 	DataBlockOffset  uint64
@@ -31,8 +36,9 @@ type DataBlockEntry struct {
 }
 
 type IndexBlockEntry struct {
-	Key    string
-	Offset uint64
+	KeyLength uint64
+	Key       string
+	Offset    int64
 }
 
 func NewMemtable() *Memtable {
@@ -179,7 +185,7 @@ func (s *SkipList) getLastLevelList() *SkipListNode {
 	return curr
 }
 
-func (m *Memtable) FlushToSSTable() {
+func (m *Memtable) FlushToSSTable(s *SSTable) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -199,12 +205,12 @@ func (m *Memtable) FlushToSSTable() {
 		}
 	}
 
-	WriteToSSTable(dataBlockEntries)
+	s.WriteToSSTable(dataBlockEntries)
 
 	m.skiplist = newSkipList()
 }
 
-func WriteToSSTable(datablockEntry []*DataBlockEntry) error {
+func (s *SSTable) WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 
 	file, err := os.Create(FILEPATH + time.Now().Format(time.RFC3339) + ".db")
 	if err != nil {
@@ -219,7 +225,7 @@ func WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 	for _, entry := range datablockEntry {
 		offset := dataBlockOffset
 
-		indexBlockEntries = append(indexBlockEntries, IndexBlockEntry{Key: entry.Key, Offset: offset})
+		indexBlockEntries = append(indexBlockEntries, IndexBlockEntry{KeyLength: entry.KeyLength, Key: entry.Key, Offset: offset})
 
 		keyLen := entry.KeyLength
 		valueLen := entry.ValueLength
@@ -235,8 +241,7 @@ func WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 	indexBlockOffset := dataBlockOffset
 
 	for _, entry := range indexBlockEntries {
-		keyLen := uint32(len(entry.Key))
-		binary.Write(file, binary.LittleEndian, keyLen)
+		binary.Write(file, binary.LittleEndian, entry.KeyLength)
 		file.WriteString(entry.Key)
 		binary.Write(file, binary.LittleEndian, entry.Offset)
 	}
@@ -248,10 +253,72 @@ func WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 		IndexBlockOffset: indexBlockOffset,
 	}
 
+	s.file = file
+
 	binary.Write(file, binary.LittleEndian, header)
 	return nil
 }
 
-func LoadSSTable() {
+func (s *SSTable) LoadSSTableIndex(filename string) {
 
+	file, err := os.Open(filename)
+	if err != nil {
+		return
+	}
+
+	defer file.Close()
+	header := SSTableHeader{}
+
+	binary.Read(file, binary.LittleEndian, &header)
+
+	indexBlockOffset := header.IndexBlockOffset
+	file.Seek(int64(indexBlockOffset), 0)
+
+	s.index = make(map[string]int64)
+	for {
+		var entry IndexBlockEntry
+
+		err = binary.Read(file, binary.LittleEndian, &entry.KeyLength)
+		if err != nil {
+			break
+		}
+
+		keyBytes := make([]byte, entry.KeyLength)
+		_, err = file.Read(keyBytes)
+		if err != nil {
+			break
+		}
+		entry.Key = string(keyBytes)
+
+		err = binary.Read(file, binary.LittleEndian, &entry.Offset)
+		if err != nil {
+			break
+		}
+		s.index[entry.Key] = entry.Offset
+	}
+}
+
+func (s *SSTable) Lookup(key string) (string, bool) {
+	offset, exists := s.index[key]
+	if !exists {
+		return "", false
+	}
+
+	return s.readDataBlock(offset)
+}
+
+func (s *SSTable) readDataBlock(offset int64) (string, bool) {
+	s.file.Seek(offset, 0)
+
+	var keyLen uint64
+	var valueLen uint64
+	binary.Read(s.file, binary.LittleEndian, &keyLen)
+	keyBytes := make([]byte, keyLen)
+	s.file.Read(keyBytes)
+
+	binary.Read(s.file, binary.LittleEndian, &valueLen)
+	valueBytes := make([]byte, valueLen)
+	s.file.Read(valueBytes)
+
+	return string(valueBytes), true
 }

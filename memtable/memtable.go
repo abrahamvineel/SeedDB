@@ -19,13 +19,14 @@ type Memtable struct {
 
 type SSTable struct {
 	file  *os.File
-	index map[string]int64
+	index map[string]uint64
 }
 
 type SSTableHeader struct {
-	MagicNumber      uint32
-	DataBlockOffset  uint64
-	IndexBlockOffset uint64
+	MagicNumber       uint32
+	DataBlockOffset   uint64
+	IndexBlockOffset  uint64
+	BloomFilterOffset uint64
 }
 
 type DataBlockEntry struct {
@@ -38,7 +39,7 @@ type DataBlockEntry struct {
 type IndexBlockEntry struct {
 	KeyLength uint64
 	Key       string
-	Offset    int64
+	Offset    uint64
 }
 
 func NewMemtable() *Memtable {
@@ -239,18 +240,27 @@ func (s *SSTable) WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 	}
 
 	indexBlockOffset := dataBlockOffset
+	var bloomFilterOffset uint64
+	var indexBlockSize uint64 = 0
 
 	for _, entry := range indexBlockEntries {
+		keyLen := entry.KeyLength
+
 		binary.Write(file, binary.LittleEndian, entry.KeyLength)
 		file.WriteString(entry.Key)
 		binary.Write(file, binary.LittleEndian, entry.Offset)
+
+		indexBlockSize = 8 + keyLen + 8
 	}
+
+	bloomFilterOffset = dataBlockOffset + indexBlockSize
 
 	file.Seek(0, 0)
 	header := SSTableHeader{
-		MagicNumber:      123123,
-		DataBlockOffset:  12,
-		IndexBlockOffset: indexBlockOffset,
+		MagicNumber:       123123,
+		DataBlockOffset:   12,
+		IndexBlockOffset:  indexBlockOffset,
+		BloomFilterOffset: bloomFilterOffset,
 	}
 
 	s.file = file
@@ -274,7 +284,7 @@ func (s *SSTable) LoadSSTableIndex(filename string) {
 	indexBlockOffset := header.IndexBlockOffset
 	file.Seek(int64(indexBlockOffset), 0)
 
-	s.index = make(map[string]int64)
+	s.index = make(map[string]uint64)
 	for {
 		var entry IndexBlockEntry
 
@@ -307,8 +317,8 @@ func (s *SSTable) Lookup(key string) (string, bool) {
 	return s.readDataBlock(offset)
 }
 
-func (s *SSTable) readDataBlock(offset int64) (string, bool) {
-	s.file.Seek(offset, 0)
+func (s *SSTable) readDataBlock(offset uint64) (string, bool) {
+	s.file.Seek(int64(offset), 0)
 
 	var keyLen uint64
 	var valueLen uint64

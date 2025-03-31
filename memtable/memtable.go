@@ -321,4 +321,5 @@ func (s *SSTable) readDataBlock(offset int64) (string, bool) {
 	s.file.Read(valueBytes)
 
 	return string(valueBytes), true
+
 }

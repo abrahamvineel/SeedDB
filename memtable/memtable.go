@@ -22,6 +22,12 @@ type SSTable struct {
 	index map[string]uint64
 }
 
+type BloomFilter struct {
+	bitset       []bool
+	size         uint64
+	hashFunction []func(string) uint64
+}
+
 type SSTableHeader struct {
 	MagicNumber       uint32
 	DataBlockOffset   uint64

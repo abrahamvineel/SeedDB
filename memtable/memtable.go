@@ -2,6 +2,7 @@ package memtable
 
 import (
 	"encoding/binary"
+	"hash/fnv"
 	"math/rand"
 	"os"
 	"sync"
@@ -338,4 +339,33 @@ func (s *SSTable) readDataBlock(offset uint64) (string, bool) {
 
 	return string(valueBytes), true
 
+}
+
+func NewBloomFilter(size uint64, hashFunctionsNum uint64) *BloomFilter {
+	bf := &BloomFilter{
+		bitset:       make([]bool, size),
+		size:         size,
+		hashFunction: make([]func(string) uint64, hashFunctionsNum),
+	}
+
+	for i := uint64(0); i < hashFunctionsNum; i++ {
+		bf.hashFunction[i] = newHashFunction(i)
+	}
+
+	return bf
+}
+
+func newHashFunction(seed uint64) func(string) uint64 {
+	return func(key string) uint64 {
+		h := fnv.New64a()
+		h.Write([]byte(key))
+		return (h.Sum64() + seed) % seed
+	}
+}
+
+func (bf *BloomFilter) Insert(key string) {
+	for _, hashFunc := range bf.hashFunction {
+		index := hashFunc(key) % bf.size
+		bf.bitset[index] = true
+	}
 }

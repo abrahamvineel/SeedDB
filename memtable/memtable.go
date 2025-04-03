@@ -228,7 +228,7 @@ func (s *SSTable) WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 	defer file.Close()
 
 	var indexBlockEntries []IndexBlockEntry
-	dataBlockOffset := uint64(12)
+	dataBlockOffset := uint64(16)
 
 	for _, entry := range datablockEntry {
 		offset := dataBlockOffset
@@ -278,6 +278,7 @@ func (s *SSTable) WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 
 func (s *SSTable) LoadSSTableIndex(filename string) {
 
+	//need to add s.file.open
 	file, err := os.Open(filename)
 	if err != nil {
 		return
@@ -368,4 +369,46 @@ func (bf *BloomFilter) Insert(key string) {
 		index := hashFunc(key) % bf.size
 		bf.bitset[index] = true
 	}
+}
+
+func (bf *BloomFilter) MightContain(key string) bool {
+	for _, hashFunc := range bf.hashFunction {
+		index := hashFunc(key) % bf.size
+		if !bf.bitset[index] {
+			return false
+		}
+	}
+	return true
+}
+
+func (bf *BloomFilter) SaveBloomFilterToFile(sst *SSTable) error {
+
+	//ss.file.open
+	if err != nil {
+		return
+	}
+
+	defer file.Close()
+	header := SSTableHeader{}
+
+	binary.Read(file, binary.LittleEndian, &header)
+
+	indexBlockOffset := header.IndexBlockOffset
+	file.Seek(int64(indexBlockOffset), 0)
+
+	for _, bit := range bf.bitset {
+		var b byte
+		if bit {
+			b = 1
+		} else {
+			b = 0
+		}
+		sst.file.Seek()
+
+		err := binary.Write(sst.file, binary.LittleEndian, b)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

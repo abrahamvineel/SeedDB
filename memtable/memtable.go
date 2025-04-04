@@ -10,7 +10,9 @@ import (
 )
 
 const (
-	FILEPATH = "sstable_"
+	FILEPATH           = "sstable_"
+	BLOOM_FILTER_SIZE  = 2048
+	HASH_FUNCTION_SIZE = 8
 )
 
 type Memtable struct {
@@ -19,8 +21,9 @@ type Memtable struct {
 }
 
 type SSTable struct {
-	file  *os.File
-	index map[string]uint64
+	file        *os.File
+	index       map[string]uint64
+	bloomFilter *BloomFilter
 }
 
 type BloomFilter struct {
@@ -276,7 +279,7 @@ func (s *SSTable) WriteToSSTable(datablockEntry []*DataBlockEntry) error {
 	return nil
 }
 
-func (s *SSTable) LoadSSTableIndex(filename string) {
+func (s *SSTable) LoadSSTable(filename string) {
 
 	//need to add s.file.open
 	file, err := os.Open(filename)
@@ -284,13 +287,21 @@ func (s *SSTable) LoadSSTableIndex(filename string) {
 		return
 	}
 
+	s.file = file
 	defer file.Close()
+
 	header := SSTableHeader{}
-
 	binary.Read(file, binary.LittleEndian, &header)
-
 	indexBlockOffset := header.IndexBlockOffset
 	file.Seek(int64(indexBlockOffset), 0)
+
+	bf := &BloomFilter{
+		bitset:       make([]bool, BLOOM_FILTER_SIZE),
+		size:         BLOOM_FILTER_SIZE,
+		hashFunction: make([]func(string) uint64, HASH_FUNCTION_SIZE),
+	}
+
+	s.bloomFilter = bf
 
 	s.index = make(map[string]uint64)
 	for {
@@ -317,6 +328,11 @@ func (s *SSTable) LoadSSTableIndex(filename string) {
 }
 
 func (s *SSTable) Lookup(key string) (string, bool) {
+
+	if !s.bloomFilter.MightContain(key) {
+		return "", false
+	}
+
 	offset, exists := s.index[key]
 	if !exists {
 		return "", false
@@ -342,14 +358,14 @@ func (s *SSTable) readDataBlock(offset uint64) (string, bool) {
 
 }
 
-func NewBloomFilter(size uint64, hashFunctionsNum uint64) *BloomFilter {
+func NewBloomFilter(size uint64) *BloomFilter {
 	bf := &BloomFilter{
 		bitset:       make([]bool, size),
 		size:         size,
-		hashFunction: make([]func(string) uint64, hashFunctionsNum),
+		hashFunction: make([]func(string) uint64, HASH_FUNCTION_SIZE),
 	}
 
-	for i := uint64(0); i < hashFunctionsNum; i++ {
+	for i := uint64(0); i < HASH_FUNCTION_SIZE; i++ {
 		bf.hashFunction[i] = newHashFunction(i)
 	}
 

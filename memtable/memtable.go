@@ -383,18 +383,11 @@ func (bf *BloomFilter) MightContain(key string) bool {
 
 func (bf *BloomFilter) SaveBloomFilterToFile(sst *SSTable) error {
 
-	//ss.file.open
-	if err != nil {
-		return
-	}
+	sst.file.Seek(0, 0)
 
-	defer file.Close()
 	header := SSTableHeader{}
-
-	binary.Read(file, binary.LittleEndian, &header)
-
-	indexBlockOffset := header.IndexBlockOffset
-	file.Seek(int64(indexBlockOffset), 0)
+	binary.Read(sst.file, binary.LittleEndian, &header)
+	sst.file.Seek(int64(header.BloomFilterOffset), 0)
 
 	for _, bit := range bf.bitset {
 		var b byte
@@ -403,12 +396,29 @@ func (bf *BloomFilter) SaveBloomFilterToFile(sst *SSTable) error {
 		} else {
 			b = 0
 		}
-		sst.file.Seek()
 
+		//need to optimize
 		err := binary.Write(sst.file, binary.LittleEndian, b)
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (bf *BloomFilter) LoadBloomFilterFromFile(sst *SSTable) error {
+	sst.file.Seek(0, 0)
+
+	sstHeader := SSTableHeader{}
+	binary.Read(sst.file, binary.LittleEndian, &sstHeader)
+	sst.file.Seek(int64(sstHeader.BloomFilterOffset), 0)
+
+	for i := range bf.bitset {
+		var b byte
+		if err := binary.Read(sst.file, binary.LittleEndian, &b); err != nil {
+			return err
+		}
+		bf.bitset[i] = (b == 1)
 	}
 	return nil
 }

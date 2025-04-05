@@ -44,11 +44,14 @@ func (bellDB *BellDB) Get(key string) (string, bool) {
 	if found {
 		return value, found
 	}
+	fmt.Print("value")
 	value, ok := bellDB.bellDB[key]
 	return value, ok
 }
 
 func (bellDB *BellDB) Delete(key string) {
+	bellDB.lsmTree.Delete(key)
+	bellDB.wal.CreateLogRecord(3, key, "")
 	delete(bellDB.bellDB, key)
 }
 

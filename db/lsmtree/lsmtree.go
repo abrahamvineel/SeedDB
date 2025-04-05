@@ -1,4 +1,4 @@
-package memtable
+package lsmtree
 
 import (
 	"encoding/binary"

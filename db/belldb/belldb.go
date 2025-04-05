@@ -5,23 +5,45 @@ import (
 	"fmt"
 	"hash/crc32"
 	"os"
+	"sync"
+
+	"kv_store/db/lsmtree"
+	"kv_store/db/wal"
 
 	"github.com/vmihailenco/msgpack"
 )
 
 type BellDB struct {
-	bellDB map[string]string
+	bellDB  map[string]string
+	wal     *wal.WAL
+	lsmTree *lsmtree.LSMTree
+	mu      sync.Mutex
 }
 
 func GetInstance() *BellDB {
-	return &BellDB{bellDB: make(map[string]string)}
+	return &BellDB{
+		bellDB:  make(map[string]string),
+		wal:     wal.NewWAL("wal.log"),
+		lsmTree: lsmtree.NewLSMTree(2048),
+	}
 }
 
 func (bellDB *BellDB) Put(key string, value string) {
+	bellDB.mu.Lock()
+	defer bellDB.mu.Unlock()
+
+	logRecord, _ := bellDB.wal.CreateLogRecord(1, key, value)
+	bellDB.wal.SequentialWrite(logRecord)
+	bellDB.lsmTree.Put(key, value)
 	bellDB.bellDB[key] = value
 }
 
 func (bellDB *BellDB) Get(key string) (string, bool) {
+	value, found := bellDB.lsmTree.Get(key)
+
+	if found {
+		return value, found
+	}
 	value, ok := bellDB.bellDB[key]
 	return value, ok
 }

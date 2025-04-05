@@ -1,17 +1,16 @@
-package main
+package wal
 
 import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"hash/crc32"
 	"io"
+	"math/rand"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/bwmarrin/snowflake"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -48,7 +47,7 @@ const (
 	INVALID_OPERATION Operation = 4
 )
 
-func (wal *WAL) createLogRecord(operation int, key string, value string) (*LogRecord, error) {
+func (wal *WAL) CreateLogRecord(operation int, key string, value string) (*LogRecord, error) {
 	//generate lsn
 	currOffset, err := wal.file.Seek(0, io.SeekCurrent)
 	if err != nil {
@@ -73,11 +72,14 @@ func (wal *WAL) createLogRecord(operation int, key string, value string) (*LogRe
 	//calculate checksum
 	checksum := crc32.ChecksumIEEE(data)
 
-	node, err := snowflake.NewNode(1)
+	// node, err := snowflake.NewNode(1)
 	if err != nil {
 		return nil, err
 	}
-	txnId := node.Generate()
+	// txnId := node.Generate()
+
+	rand.Seed(time.Now().UnixNano())
+	txnId := rand.Uint64()
 
 	record := &LogRecord{
 		LogSequenceNumber: uint64(currOffset),
@@ -105,7 +107,7 @@ func operationMapper(operation int) (Operation, error) {
 	return INVALID_OPERATION, errors.New("invalid operation")
 }
 
-func (wal *WAL) sequentialWrite(record *LogRecord) (*WAL, error) {
+func (wal *WAL) SequentialWrite(record *LogRecord) (*WAL, error) {
 	wal.mu.Lock()
 	defer wal.mu.Unlock()
 
@@ -123,7 +125,7 @@ func (wal *WAL) sequentialWrite(record *LogRecord) (*WAL, error) {
 	return wal, nil
 }
 
-func (wal *WAL) batchWrite(logRecords []LogRecord) error {
+func (wal *WAL) BatchWrite(logRecords []LogRecord) error {
 	wal.mu.Lock()
 	defer wal.mu.Unlock()
 
@@ -182,11 +184,11 @@ func (wal *WAL) createCheckpoint(filePath string) error {
 	return nil
 }
 
-func NewWAL(filePath string) (*WAL, error) {
+func NewWAL(filePath string) *WAL {
 
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	wal := &WAL{
@@ -194,19 +196,14 @@ func NewWAL(filePath string) (*WAL, error) {
 		LastLogSequenceNumber: 0,
 	}
 
-	return wal, nil
+	return wal
 }
 
-func main() {
-	wal, err := NewWAL("test.txt")
+// func main() {
+// 	wal := NewWAL("test.txt")
 
-	if err != nil {
-		fmt.Println("error in creating wal", err)
-		return
-	}
+// 	logRecord, _ := wal.CreateLogRecord(1, "hello", "world")
+// 	wal.SequentialWrite(logRecord)
 
-	logRecord, _ := wal.createLogRecord(1, "hello:world")
-	wal.sequentialWrite(logRecord)
-
-	defer wal.file.Close()
-}
+// 	defer wal.file.Close()
+// }

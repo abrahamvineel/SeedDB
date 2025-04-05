@@ -15,6 +15,12 @@ const (
 	HASH_FUNCTION_SIZE = 8
 )
 
+type LSMTree struct {
+	memtable     Memtable
+	sstables     []*SSTable
+	memtableSize int
+}
+
 type Memtable struct {
 	skiplist *SkipList
 	mu       sync.RWMutex
@@ -50,6 +56,73 @@ type IndexBlockEntry struct {
 	KeyLength uint64
 	Key       string
 	Offset    uint64
+}
+
+func NewLSMTree(size int) *LSMTree {
+	return &LSMTree{
+		memtable:     *NewMemtable(),
+		sstables:     []*SSTable{},
+		memtableSize: size,
+	}
+}
+
+func (lsm *LSMTree) Put(key, value string) {
+
+	lsm.memtable.Put(key, value)
+
+	if lsm.memtable.getSize() >= lsm.memtableSize {
+		sstable := &SSTable{}
+		lsm.memtable.FlushToSSTable(sstable)
+
+		bf := NewBloomFilter(BLOOM_FILTER_SIZE)
+
+		for k := range sstable.index {
+			bf.Insert(k)
+		}
+
+		sstable.bloomFilter = bf
+		bf.SaveBloomFilterToFile(sstable)
+
+		lsm.sstables = append(lsm.sstables, lsm.sstables...)
+	}
+}
+
+func (lsm *LSMTree) Get(key string) (string, bool) {
+
+	node, found := lsm.memtable.skiplist.search(key)
+	if found {
+		if node.Tombstone {
+			return "", false
+		}
+		return node.Value, true
+	}
+
+	for _, sstable := range lsm.sstables {
+		value, found := sstable.Lookup(key)
+		if found {
+			return value, true
+		}
+	}
+	return "", false
+}
+
+func (lsm *LSMTree) Delete(key string) {
+	lsm.memtable.Delete(key)
+}
+
+func (m *Memtable) getSize() int {
+	return m.skiplist.getSize()
+}
+
+func (s *SkipList) getSize() int {
+	curr := s.getLastLevelList()
+	count := 0
+
+	for curr.Right != nil {
+		count++
+		curr = curr.Right
+	}
+	return count
 }
 
 func NewMemtable() *Memtable {

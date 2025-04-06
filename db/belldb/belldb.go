@@ -44,7 +44,6 @@ func (bellDB *BellDB) Get(key string) (string, bool) {
 	if found {
 		return value, found
 	}
-	fmt.Print("value")
 	value, ok := bellDB.bellDB[key]
 	return value, ok
 }

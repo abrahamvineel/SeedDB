@@ -30,8 +30,4 @@ func main() {
 	bellDB.Save("test.db")
 
 	// bellDB.Read("test.db")
-
-	// kvstore.Read("test.dat")
-
-	// fmt.Println(kvstore.kvstore)
 }

@@ -1,1 +1,6 @@
-#start db
+/*
+get key
+set key
+delete key
+update key
+*/
